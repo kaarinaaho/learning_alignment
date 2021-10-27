@@ -4,11 +4,14 @@ from os.path import dirname, abspath, join
 import sys
 
 import process_data as process
-import modelling_plots as plot
+import modelling.modelling_plots as plot
 
 d = dirname(abspath(__file__))
 sys.path.append(
     d
+    )
+sys.path.append(
+    dirname(d)
     )
 
 # Processing function - extract trial info from raw events file

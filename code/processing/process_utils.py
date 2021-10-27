@@ -81,23 +81,3 @@ def alignment_correlation(systemA, systemB):
 
     return r_s
 
-
-def append_random_model(df):
-    # Append random model
-    random_df = df[["pid", "align_condition"]].drop_duplicates()
-    random_df["model"] = "random"
-    random_df[["lr_sup", "lr_unsup", "lr", "lam_a_cyc", "lam_dist", "hidden_size", "s", "params"]] = 0
-    random_df["loss"] = - 30 * np.log(1/6)
-    df = pd.concat([df, random_df])
-    return(df)
-
-
-def calculate_AIC(df):
-    # Implement AIC 2k - 2ln(L)
-    df["params"] = 3
-    df.loc[df["model"] == "cycle_and_distribution", "params"] = 5
-    df.loc[df["model"] == "random", "params"] = 0
-    df["AIC"] = 2*df["params"] + 2 * df["loss"]
-    df["ranked_AIC"] = df.groupby("pid")["AIC"].rank("dense", ascending=True)
-
-    return df

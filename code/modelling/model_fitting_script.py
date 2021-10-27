@@ -2,8 +2,15 @@
 
 from os.path import dirname, abspath, join
 import sys
+d = dirname(abspath(__file__))
 
-import process_data as process
+sys.path.append(
+    d
+    )
+sys.path.append(
+    dirname(d)
+    )
+import processing.process_data as process
 import modelling_plots as plot
 import pandas as pd
 
@@ -18,13 +25,9 @@ from hyperopt import fmin, tpe, Trials
 
 import os.path
 
-d = dirname(abspath(__file__))
-sys.path.append(
-    d
-    )
 
 def get_pids(i_d, tot_split=5):
-    data = pd.read_csv(join(dirname(dirname(dirname(d))), "data/experiment/processed/Processed_data_filtered.csv"))
+    data = pd.read_csv(join(dirname(dirname(d)), "data/experiment/processed/Processed_data_filtered.csv"))
     data = data["pid"].drop_duplicates()
     n_pids = len(data)
     interval = int(np.floor(n_pids/tot_split))
@@ -41,7 +44,7 @@ def fit_participant_data(
     ):
 
     # For each participant, read in series of trials and the condition they were assigned to:
-    data = pd.read_csv(join(dirname(dirname(dirname(d))), "data/experiment/processed/Processed_data_filtered.csv"))
+    data = pd.read_csv(join(dirname(dirname(d)), "data/experiment/processed/Processed_data_filtered.csv"))
     data = process.get_submitted_coords(data)
 
     model_types = ["euclidean", "classifier", "cycle_and_distribution"]
@@ -146,12 +149,15 @@ if __name__ == "__main__":
     pids = get_pids(0, 50)  # Select the first 1/50th of participants
     fit_participant_data(
         pids,
-        fp="data/models/new_fits/hyperparam_opt_results.csv"
+        fp = join(
+                    dirname(dirname(d)),
+                    "data/models/new_fits/hyperparam_opt_results.csv"
+                  )
         )
 
     best_fits_test = pd.read_csv(
         join(
-            dirname(dirname(dirname(d))),
+            dirname(dirname(d)),
             "data/models/new_fits/hyperparam_opt_results.csv"
         )
     )
@@ -168,6 +174,4 @@ if __name__ == "__main__":
     )
     plot.plot_best_fits(best_fits_all, plt_type="count")
     plot.plot_best_fits(best_fits_all, plt_type="AIC_uplift")
-
-    # Test
     """

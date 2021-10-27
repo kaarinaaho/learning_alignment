@@ -19,15 +19,16 @@
 """Processing functions for data collected from align experiment."""
 from os.path import join, dirname, abspath
 import sys
-import pandas as pd
-import numpy as np
-import ana_utils as utils
-from scipy.stats.mstats import mquantiles
 
 d = dirname(abspath(__file__))
 sys.path.append(
     d
     )
+import pandas as pd
+import numpy as np
+import process_utils as utils
+from scipy.stats.mstats import mquantiles
+
 
 def get_response_entropy(df_in, entropy="by_block", exclude_final=True):
     df = df_in.copy()

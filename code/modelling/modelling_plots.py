@@ -2,12 +2,9 @@
 
 import pandas as pd
 import numpy as np
-from scipy import stats
-import random
-import re
 
 import modelling_utils as mu
-import ana_utils as utils
+import processing.process_utils as utils
 
 import seaborn as sns
 import matplotlib.patches as mpatches
@@ -126,8 +123,8 @@ def plot_block_means_2conditions(df, col_name="correct", unit="block",
 
 def plot_best_fits(best_fits, plt_type="count", save=False):
 
-    models_included = utils.append_random_model(best_fits)
-    models_included = utils.calculate_AIC(models_included)
+    models_included = mu.append_random_model(best_fits)
+    models_included = mu.calculate_AIC(models_included)
 
     colors = ["#2ab7ca", "#fe4a49"]
     sns.set_palette(sns.color_palette(colors))

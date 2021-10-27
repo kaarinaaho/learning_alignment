@@ -160,7 +160,7 @@ def branched(probs, alpha):
 
 def get_pid_map(pid):
     maps = pd.read_csv(join(
-                            dirname(dirname(dirname(d))),
+                            dirname(dirname(d)),
                             "data/experiment/raw/all_maps.csv"
                             ), header=None, sep=";")
     maps.columns = ["pid", "houseID", "house_x", "house_y", "creature_x",
@@ -208,7 +208,7 @@ def get_pid_map(pid):
 
 def get_pid_trials(pid):
     events = pd.read_csv(join(
-                            dirname(dirname(dirname(d))),
+                            dirname(dirname(d)),
                             "data/experiment/raw/all_events.csv"
                             ), sep=";", header=None)
     events.columns = [
@@ -260,7 +260,7 @@ def get_pid_trials(pid):
 
 def get_pid_generalisation(pid):
     maps = pd.read_csv(join(
-                            dirname(dirname(dirname(d))),
+                            dirname(dirname(d)),
                             "data/experiment/raw/all_maps.csv"
                             ), header=None, sep=";")
     maps.columns = ["pid", "houseID", "house_x", "house_y", "creature_x",
@@ -300,3 +300,24 @@ def get_pid_generalisation(pid):
     gen_info["y_gen_idxcorrect"] = 0
 
     return gen_info
+
+
+def append_random_model(df):
+    # Append random model
+    random_df = df[["pid", "align_condition"]].drop_duplicates()
+    random_df["model"] = "random"
+    random_df[["lr_sup", "lr_unsup", "lr", "lam_a_cyc", "lam_dist", "hidden_size", "s", "params"]] = 0
+    random_df["loss"] = - 30 * np.log(1/6)
+    df = pd.concat([df, random_df])
+    return(df)
+
+
+def calculate_AIC(df):
+    # Implement AIC 2k - 2ln(L)
+    df["params"] = 3
+    df.loc[df["model"] == "cycle_and_distribution", "params"] = 5
+    df.loc[df["model"] == "random", "params"] = 0
+    df["AIC"] = 2*df["params"] + 2 * df["loss"]
+    df["ranked_AIC"] = df.groupby("pid")["AIC"].rank("dense", ascending=True)
+
+    return df
