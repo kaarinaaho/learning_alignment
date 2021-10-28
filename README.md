@@ -35,6 +35,7 @@ A rough pipeline for usage of this repo is as follows:
 3. Change script `./code/modelling/model_fitting_script.py` setting `plot_fitted` to False on line 149
 4. Run above script
   - Note that this simple script runs fits for participants in series. If seeking to run this for all participants, this would take a very long time. If you wanted to replicate the full procedure, we recommend splitting the participant set into parallel streams and running across multiple CPUs. 
+5. Results will be saved in `./data/models/new_fits/`
 
 **To replicate plots for paper model fits:**
 1. Run `./code/modelling/model_fitting_script.py`
