@@ -1,18 +1,7 @@
 library(tidyr)
 library(dplyr)
 library(tibble)
-library(mapdata)
-library(VGAM)
-library(gamlss)
-library(zipfR)
 library(ez)
-library(nlme)
-library(lme4)
-library(lmerTest)
-library(survival)
-library(MANOVA.RM)
-library(rstatix)
-library(car)
 library(apaTables)
 
 # Import filtered data: ----------------------------------------------------------#
