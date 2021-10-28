@@ -146,32 +146,35 @@ def fit_participant_data(
 
 if __name__ == "__main__":
 
-    pids = get_pids(0, 50)  # Select the first 1/50th of participants
-    fit_participant_data(
-        pids,
-        fp = join(
-                    dirname(dirname(d)),
-                    "data/models/new_fits/hyperparam_opt_results.csv"
-                  )
-        )
+    plot_fitted = True
 
-    best_fits_test = pd.read_csv(
-        join(
-            dirname(dirname(d)),
-            "data/models/new_fits/hyperparam_opt_results.csv"
-        )
-    )
-    plot.plot_best_fits(best_fits_test, plt_type="count")
-    plot.plot_best_fits(best_fits_test, plt_type="AIC_uplift")
+    if plot_fitted is False:
+        pids = get_pids(0, 50)  # Select the first 1/50th of participants
+        fit_participant_data(
+            pids,
+            fp = join(
+                        dirname(dirname(d)),
+                        "data/models/new_fits/hyperparam_opt_results.csv"
+                    )
+            )
 
-    """
-    # Hyperparam count plotting functions for full set of fits
-    best_fits_all = pd.read_csv(
-        join(
-            dirname(dirname(dirname(d))),
-            "data/models/paper_results/fitted_model_hyperparams.csv"
+        best_fits_test = pd.read_csv(
+            join(
+                dirname(dirname(d)),
+                "data/models/new_fits/hyperparam_opt_results.csv"
+            )
         )
-    )
-    plot.plot_best_fits(best_fits_all, plt_type="count")
-    plot.plot_best_fits(best_fits_all, plt_type="AIC_uplift")
-    """
+        plot.plot_best_fits(best_fits_test, plt_type="count")
+        plot.plot_best_fits(best_fits_test, plt_type="AIC_uplift")
+
+    else:
+        # Hyperparam count plotting functions for full set of fits
+        best_fits_all = pd.read_csv(
+            join(
+                dirname(dirname(dirname(d))),
+                "data/models/paper_results/fitted_model_hyperparams.csv"
+            )
+        )
+        plot.plot_best_fits(best_fits_all, plt_type="count")
+        plot.plot_best_fits(best_fits_all, plt_type="AIC_uplift")
+
