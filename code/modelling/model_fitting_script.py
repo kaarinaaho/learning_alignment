@@ -5,18 +5,16 @@ import sys
 d = dirname(abspath(__file__))
 
 sys.path.append(
-    d
+        d
     )
 sys.path.append(
-    dirname(d)
+        dirname(d)
     )
+
 import processing.process_data as process
-import modelling_plots as plot
-import pandas as pd
 
 import modelling_main as mm
 import modelling_utils as mu
-import modelling_plots as plot
 
 import pandas as pd
 import numpy as np
@@ -27,7 +25,12 @@ import os.path
 
 
 def get_pids(i_d, tot_split=5):
-    data = pd.read_csv(join(dirname(dirname(d)), "data/experiment/processed/Processed_data_filtered.csv"))
+    """Split pids into tot_split segments, e.g for parallel processing."""
+    data = pd.read_csv(
+        join(
+            dirname(dirname(d)),
+            "data/experiment/processed/Processed_data_filtered.csv"
+            ))
     data = data["pid"].drop_duplicates()
     n_pids = len(data)
     interval = int(np.floor(n_pids/tot_split))
@@ -39,12 +42,17 @@ def get_pids(i_d, tot_split=5):
 
 
 def fit_participant_data(
-    pids,
-    fp="data/models/new_fits/hyperparam_opt_results.csv"
-    ):
-
-    # For each participant, read in series of trials and the condition they were assigned to:
-    data = pd.read_csv(join(dirname(dirname(d)), "data/experiment/processed/Processed_data_filtered.csv"))
+            pids,
+            fp="data/models/new_fits/hyperparam_opt_results.csv"
+        ):
+    """For inputted pids, find best fitting params for each model type."""
+    # For each pid, get series of trials and assigned condition:
+    data = pd.read_csv(
+        join(
+            dirname(dirname(d)),
+            "data/experiment/processed/Processed_data_filtered.csv"
+            )
+        )
     data = process.get_submitted_coords(data)
 
     model_types = ["euclidean", "classifier", "cycle_and_distribution"]
@@ -140,21 +148,22 @@ def fit_participant_data(
 
                 df = pd.concat([df, append])
 
-            # Save best to df of pid, model type, parameters selected and AIC of the resulting fitted model
+            # Save best fits for each pid to df
             df.to_csv(fp)
 
 
 if __name__ == "__main__":
 
-    plot_fitted = True
+    plot_fitted = False
 
     if plot_fitted is False:
+
         pids = get_pids(0, 50)  # Select the first 1/50th of participants
         fit_participant_data(
             pids,
-            fp = join(
-                        dirname(dirname(d)),
-                        "data/models/new_fits/hyperparam_opt_results.csv"
+            fp=join(
+                    dirname(dirname(d)),
+                    "data/models/new_fits/hyperparam_opt_results.csv"
                     )
             )
 
@@ -164,17 +173,17 @@ if __name__ == "__main__":
                 "data/models/new_fits/hyperparam_opt_results.csv"
             )
         )
-        plot.plot_best_fits(best_fits_test, plt_type="count")
-        plot.plot_best_fits(best_fits_test, plt_type="AIC_uplift")
+
+        mu.plot_best_fits(best_fits_test, plt_type="count")
+        mu.plot_best_fits(best_fits_test, plt_type="AIC_uplift")
 
     else:
         # Hyperparam count plotting functions for full set of fits
         best_fits_all = pd.read_csv(
             join(
-                dirname(dirname(dirname(d))),
+                dirname(dirname(d)),
                 "data/models/paper_results/fitted_model_hyperparams.csv"
             )
         )
-        plot.plot_best_fits(best_fits_all, plt_type="count")
-        plot.plot_best_fits(best_fits_all, plt_type="AIC_uplift")
-
+        mu.plot_best_fits(best_fits_all, plt_type="count")
+        mu.plot_best_fits(best_fits_all, plt_type="AIC_uplift")

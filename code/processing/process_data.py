@@ -26,16 +26,19 @@ sys.path.append(
     )
 import pandas as pd
 import numpy as np
-import process_utils as utils
+import process_utils as pu
 from scipy.stats.mstats import mquantiles
 
 
 def get_response_entropy(df_in, entropy="by_block", exclude_final=True):
+    """Calculate entropy of responses by block or overall."""
     df = df_in.copy()
     df = df.loc[df["trial_type"] == "trial-mainTrial"]
 
     if exclude_final is True:
-        max_block = df[["pid", "block"]].groupby("pid").agg("max").reset_index()
+        max_block = df[
+                        ["pid", "block"]
+                    ].groupby("pid").agg("max").reset_index()
         max_block.columns = ["pid", "max_block"]
         df = df.merge(max_block, on="pid")
         df = df.loc[df["block"] < df["max_block"]]
@@ -46,12 +49,16 @@ def get_response_entropy(df_in, entropy="by_block", exclude_final=True):
     all_houses = pd.concat(
         [df[["pid", "block"]].drop_duplicates()]*len(house_list))
     n_reps = int(len(list(all_houses["pid"]))/len(house_list))
-    all_houses["submitted_house"] = list(np.repeat(house_list,n_reps))
+    all_houses["submitted_house"] = list(np.repeat(house_list, n_reps))
     all_houses["trial_no"] = 0
 
-    if entropy=="by_block":
+    if entropy == "by_block":
         # Count n times each house is chosen per block
-        df = df[["pid", "trial_no", "submitted_house", "block"]].groupby(["pid", "submitted_house", "block"]).agg("count")
+        df = df[
+                ["pid", "trial_no", "submitted_house", "block"]
+             ].groupby(
+                ["pid", "submitted_house", "block"]
+                ).agg("count")
         df.reset_index(inplace=True)
         df = pd.concat([df, all_houses])
         df = df.groupby(["pid", "block", "submitted_house"]).agg("sum")
@@ -60,15 +67,23 @@ def get_response_entropy(df_in, entropy="by_block", exclude_final=True):
 
         df["house_p"] = df["trial_no"]/6
         df["log_p"] = [0 if x == 0 else np.log(x) for x in df["house_p"]]
-        df = df.groupby(["pid", "block"]).apply(lambda x: -sum(x["house_p"] * x["log_p"]))
+        df = df.groupby(
+                ["pid", "block"]
+            ).apply(
+                lambda x: -sum(x["house_p"] * x["log_p"])
+                )
         df = df.reset_index()
         df.columns = ["pid", "block", "entropy"]
         df = df[["pid", "entropy"]].groupby("pid").agg("mean").reset_index()
         df = df_in.merge(df, on=["pid"], how="left")
-    
-    elif entropy=="overall":
+
+    elif entropy == "overall":
         # Count n times each house is chosen per block
-        df = df[["pid", "trial_no", "submitted_house"]].groupby(["pid", "submitted_house"]).agg("count")
+        df = df[
+                ["pid", "trial_no", "submitted_house"]
+             ].groupby(
+                 ["pid", "submitted_house"]
+             ).agg("count")
         df.reset_index(inplace=True)
         df = pd.concat([df, all_houses])
         df = df.groupby(["pid", "submitted_house"]).agg("sum")
@@ -76,10 +91,15 @@ def get_response_entropy(df_in, entropy="by_block", exclude_final=True):
 
         df["house_p"] = df["trial_no"]/60
         df["log_p"] = [0 if x == 0 else np.log(x) for x in df["house_p"]]
-        df = df.groupby(["pid"]).apply(lambda x: -sum(x["house_p"] * x["log_p"]))
+        df = df.groupby(
+                    ["pid"]
+                ).apply(
+                    lambda x: -sum(x["house_p"] * x["log_p"])
+                )
         df = df.reset_index()
         df.columns = ["pid", "entropy"]
         df = df_in.merge(df, on=["pid"], how="left")
+
     return df
 
 
@@ -115,7 +135,7 @@ def get_all_trials(df):
 def distance_from_correct(df):
     """Add column for distance between correct and submitted points."""
     df["dist_from_correct"] = df.apply(
-        lambda x: utils.calc_dist(
+        lambda x: pu.calc_dist(
             x['correct_x_normed'],
             x['correct_y_normed'],
             x['submitted_x_normed'],
@@ -151,12 +171,13 @@ def participant_wise_alignment(df, stimuli="trial"):
         creature_coords[i][0] = creature_xs[i]
         creature_coords[i][1] = creature_ys[i]
 
-    corr = utils.alignment_correlation(box_coords, creature_coords)
-    
+    corr = pu.alignment_correlation(box_coords, creature_coords)
+
     return corr
 
 
 def print_conditions(data):
+    """Print count of participants per experiment."""
     # Filter for status_code > 0
     conditions = data[
             ["align_condition", "rotate_condition", "pid"]
@@ -170,24 +191,30 @@ def print_conditions(data):
 
 
 def apply_filters(data, entropy=False):
-
+    """Replicate entropy filters used in experiment."""
     # Remove anomalous age
-    data = data.loc[data["age"]<90]
+    data = data.loc[data["age"] < 90]
 
     print("Full AMT N without 98 year old: ", len(set(data["pid"])))
     print_conditions(data)
 
     if entropy is True:
         # Filter out bottom 10% response entropy by block
-        data = data.loc[(data["entropy"] >= mquantiles(data["entropy"], prob=[0.1])[0])]
-        print("Full AMT N filtered for response entropy: ", len(set(data["pid"])))
-    
+        data = data.loc[
+            (data["entropy"] >= mquantiles(data["entropy"], prob=[0.1])[0])
+            ]
+        print(
+            "Full AMT N filtered for response entropy: ",
+            len(set(data["pid"]))
+            )
+
     print_conditions(data)
 
     return(data)
 
 
 def get_submitted_coords(data):
+    """Merge submitted coords into list."""
     data["sub_coords"] = [
             [x, data["submitted_y"].iloc[i]]
             for i, x in enumerate(data["submitted_x"])
@@ -334,11 +361,15 @@ def process_raw_data(
            (get_ti['event_detail'] == "trial-generalisation"))) |
          (get_ti['event_type'] == "submit")
         ].sort_values(by="t")
-    trial_times_load = trial_times.loc[trial_times["event_type"] == "load"].drop_duplicates(
-        subset=["pid", "event_type", "trial_no"], keep="first"
+    trial_times_load = trial_times.loc[
+            trial_times["event_type"] == "load"
+        ].drop_duplicates(
+            subset=["pid", "event_type", "trial_no"], keep="first"
         )
-    trial_times_sub = trial_times.loc[trial_times["event_type"] == "submit"].drop_duplicates(
-        subset=["pid", "event_type", "trial_no"], keep="last"
+    trial_times_sub = trial_times.loc[
+            trial_times["event_type"] == "submit"
+        ].drop_duplicates(
+            subset=["pid", "event_type", "trial_no"], keep="last"
         )
     trial_times = pd.concat([trial_times_load, trial_times_sub])
     trial_times = trial_times.pivot(
@@ -362,7 +393,7 @@ def process_raw_data(
     trial_accuracy = trial_accuracy.rename(
         columns={"event_detail": "correct"}
         )
-    trial_accuracy =trial_accuracy.drop_duplicates(
+    trial_accuracy = trial_accuracy.drop_duplicates(
         subset=["pid", "trial_no"], keep="last"
         )
     trial_accuracy["correct"].loc[trial_accuracy['correct'] == 'correct'] = 1
@@ -482,12 +513,18 @@ def process_raw_data(
 
     # Normalise between 0 and 1
     for col in ["house_x", "house_y", "creature_x", "creature_y"]:
-        map_data[col+"_normed"] = [float(x)-1 if x != "N" else "N" for x in map_data[col]]
-        map_data[col+"_normed"] = [float(x)/5 if x != "N" else "N" for x in map_data[col]]
+        map_data[col+"_normed"] = [
+            float(x)-1 if x != "N" else "N" for x in map_data[col]
+            ]
+        map_data[col+"_normed"] = [
+            float(x)/5 if x != "N" else "N" for x in map_data[col]
+            ]
 
     # Get correct coordinates and creature space coordinates by trial ID
-    correct = map_data[["pid", "house_x", "house_y", "house_x_normed", "house_y_normed", "creature_x",
-                        "creature_y", "houseID", "trialID", "position_type"]]
+    correct = map_data[[
+        "pid", "house_x", "house_y", "house_x_normed", "house_y_normed",
+        "creature_x", "creature_y", "houseID", "trialID", "position_type"
+        ]]
     correct = correct.loc[correct["houseID"] != "zeroshot-incorrect"]
     correct = correct.rename(columns={"house_x": "correct_x",
                                       "house_y": "correct_y",
@@ -499,13 +536,17 @@ def process_raw_data(
     full_data = full_data.merge(correct, on=["pid", "trial_id"])
 
     # Get sumbitted coordinates by submitted_house
-    submitted = map_data[["pid", "house_x", "house_y", "house_x_normed", "house_y_normed", "houseID"]]
+    submitted = map_data[[
+        "pid", "house_x", "house_y", "house_x_normed", "house_y_normed",
+        "houseID"
+        ]]
 
-    submitted = submitted.rename(columns={"house_x": "submitted_x",
-                                          "house_y": "submitted_y",
-                                          "house_x_normed": "submitted_x_normed",
-                                          "house_y_normed": "submitted_y_normed",
-                                          "houseID": "submitted_house"})
+    submitted = submitted.rename(
+        columns={"house_x": "submitted_x",
+                 "house_y": "submitted_y",
+                 "house_x_normed": "submitted_x_normed",
+                 "house_y_normed": "submitted_y_normed",
+                 "houseID": "submitted_house"})
 
     full_data = full_data.merge(submitted, on=["pid", "submitted_house"])
     full_data = distance_from_correct(full_data)
@@ -557,7 +598,9 @@ def process_raw_data(
         ] = "None"
     full_data["correct"] = pd.to_numeric(full_data["correct"])
 
-    full_data = get_response_entropy(full_data, entropy="by_block", exclude_final=False)
+    full_data = get_response_entropy(
+            full_data, entropy="by_block", exclude_final=False
+        )
 
     full_data.to_csv(
         fn
@@ -566,4 +609,3 @@ def process_raw_data(
 
     if return_dat:
         return full_data
-

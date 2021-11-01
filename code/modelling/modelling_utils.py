@@ -5,6 +5,9 @@ import torch
 import torch.nn.functional as F
 import torch.distributions as D
 
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 import numpy as np
 
 import pandas as pd
@@ -15,15 +18,18 @@ sys.path.append(
      d
     )
 
-def get_trials(positions, n_blocks=5, unsup_per_block=2):
 
+def generate_trials(positions, n_blocks=5, unsup_per_block=2):
+    """Generate sequence of trials in structure of expt."""
     trials = []
     trial_types = []
     meta_block_length = unsup_per_block + 1
 
     for i in range(meta_block_length * n_blocks):
 
-        shuff_blocks = random.sample([x for x in range(len(positions))], len(positions))
+        shuff_blocks = random.sample(
+            [x for x in range(len(positions))], len(positions)
+            )
         trials = trials + shuff_blocks
 
         if i % meta_block_length == 2:
@@ -32,23 +38,6 @@ def get_trials(positions, n_blocks=5, unsup_per_block=2):
             trial_types = trial_types + (["unsupervised"] * len(positions))
 
     return trials, trial_types
-
-
-def get_95_ci(df):
-    """Add columns for upper and lower bounds of 95% CI to input df."""
-    print(df)
-    df['upperci'] = df.apply(
-        lambda x: (
-            x["mean_correct"] + 1.96 * x["std_correct"]/np.sqrt(x["n_pid"])
-            ), axis=1
-        )
-    df["lowerci"] = df.apply(
-        lambda x: (
-            x["mean_correct"] - 1.96 * x["std_correct"]/np.sqrt(x["n_pid"])
-            ), axis=1
-        )
-
-    return df
 
 
 def _euclidean_distance(x, y):
@@ -89,7 +78,9 @@ def set_loss_func(fx, gmm_y_samples, gmm_scale, device):
 def get_weighted_pos(probs, space):
     """Get expected position of item based on prob dist across houses."""
     return np.sum(
-        torch.unsqueeze(probs, 1).cpu().detach().numpy() * space.cpu().detach().numpy(),
+        torch.unsqueeze(
+            probs, 1
+        ).cpu().detach().numpy() * space.cpu().detach().numpy(),
         axis=0)
 
 
@@ -119,22 +110,15 @@ def dists_to_probs(dists, device, temp=1):
 def choose_from_probs(probs, dists, policy="greedy"):
     """Select option based on probability distribution across choices.
 
-    policy = "greedy": selects the option with highest probability on 
+    policy = "greedy": selects the option with highest probability on
     each trial
-
     policy = "probabilistic": random sample from the probability
     distribution across options
     """
-
     if policy == "greedy":
         idx_select = torch.argmax(probs)
 
     elif policy == "probabilistic":
-        """
-        if(any(np.isnan(probs.detach().numpy()))):
-            print(probs.detach().numpy())
-            #print(np.array([(np.sqrt(2) - x.detach().numpy())/temp for x in dists]))
-        """
         if torch.isnan(probs).any() | torch.isinf(probs).any():
             print(probs)
         idx_select = torch.multinomial(probs, 1)
@@ -143,7 +127,7 @@ def choose_from_probs(probs, dists, policy="greedy"):
 
 
 def get_all_dists(x, y):
-
+    """Get L2 distance of x from each item in y."""
     return torch.sqrt(torch.sum(torch.pow(x - y, 2), 1))
 
 
@@ -159,6 +143,7 @@ def branched(probs, alpha):
 
 
 def get_pid_map(pid):
+    """Get pid's assigned map in expt from raw data."""
     maps = pd.read_csv(join(
                             dirname(dirname(d)),
                             "data/experiment/raw/all_maps.csv"
@@ -207,6 +192,7 @@ def get_pid_map(pid):
 
 
 def get_pid_trials(pid):
+    """Get pid's assigned series of trials in expt from raw data."""
     events = pd.read_csv(join(
                             dirname(dirname(d)),
                             "data/experiment/raw/all_events.csv"
@@ -259,6 +245,7 @@ def get_pid_trials(pid):
 
 
 def get_pid_generalisation(pid):
+    """Get pid's assigned generalisation trial from raw expt data."""
     maps = pd.read_csv(join(
                             dirname(dirname(d)),
                             "data/experiment/raw/all_maps.csv"
@@ -268,7 +255,11 @@ def get_pid_generalisation(pid):
     maps = maps.drop_duplicates()
 
     gen_info = {}
-    pid_map = maps.loc[(maps["pid"] == pid) & (maps["position_type"] == "trial") & (maps["trial_type"] == "generalisation")]
+    pid_map = maps.loc[(
+                         (maps["pid"] == pid)
+                         & (maps["position_type"] == "trial")
+                         & (maps["trial_type"] == "generalisation")
+                        )]
 
     gen_info["x_gen"] = np.array([
         pd.to_numeric(
@@ -282,18 +273,18 @@ def get_pid_generalisation(pid):
     gen_info["y_gen_options"] = [
         np.array([
             pd.to_numeric(
-            pid_map.loc[pid_map["houseID"] == "zeroshot-correct", "house_x"]
+             pid_map.loc[pid_map["houseID"] == "zeroshot-correct", "house_x"]
                 ).iloc[0],
             pd.to_numeric(
-            pid_map.loc[pid_map["houseID"] == "zeroshot-correct", "house_y"]
+             pid_map.loc[pid_map["houseID"] == "zeroshot-correct", "house_y"]
                 ).iloc[0]
         ]),
         np.array([
             pd.to_numeric(
-            pid_map.loc[pid_map["houseID"] == "zeroshot-incorrect", "house_x"]
+             pid_map.loc[pid_map["houseID"] == "zeroshot-incorrect", "house_x"]
                 ).iloc[0],
             pd.to_numeric(
-            pid_map.loc[pid_map["houseID"] == "zeroshot-incorrect", "house_y"]
+             pid_map.loc[pid_map["houseID"] == "zeroshot-incorrect", "house_y"]
                 ).iloc[0]
         ])
     ]
@@ -303,16 +294,23 @@ def get_pid_generalisation(pid):
 
 
 def append_random_model(df):
+    """Add random model to candidate models for best fit."""
     # Append random model
     random_df = df[["pid", "align_condition"]].drop_duplicates()
     random_df["model"] = "random"
-    random_df[["lr_sup", "lr_unsup", "lr", "lam_a_cyc", "lam_dist", "hidden_size", "s", "params"]] = 0
+    random_df[
+                [
+                 "lr_sup", "lr_unsup", "lr", "lam_a_cyc", "lam_dist",
+                 "hidden_size", "s", "params"
+                ]
+            ] = 0
     random_df["loss"] = - 30 * np.log(1/6)
     df = pd.concat([df, random_df])
     return(df)
 
 
 def calculate_AIC(df):
+    """Calculate Akaike's Information Criterion."""
     # Implement AIC 2k - 2ln(L)
     df["params"] = 3
     df.loc[df["model"] == "cycle_and_distribution", "params"] = 5
@@ -321,3 +319,67 @@ def calculate_AIC(df):
     df["ranked_AIC"] = df.groupby("pid")["AIC"].rank("dense", ascending=True)
 
     return df
+
+
+def plot_best_fits(best_fits, plt_type="count", save=False):
+    """Plot barplots to count which model is best fit."""
+    models_included = append_random_model(best_fits)
+    models_included = calculate_AIC(models_included)
+
+    colors = ["#2ab7ca", "#fe4a49"]
+    sns.set_palette(sns.color_palette(colors))
+
+    sel = models_included.loc[models_included["ranked_AIC"] == 1]
+
+    plt_params = {
+        "count": {
+            "y": ("pid", "nunique"),
+            "y_lab": "Count best fit model",
+            "x_labs": [
+                "Regression + Aligner", "Classifier", "Regression", "Random"
+                ],
+            "fn": "Barplot_modelfits.png"
+        },
+        "AIC_uplift": {
+            "y": "baseline_uplift",
+            "y_lab": "% AIC improvement from random",
+            "x_labs": ["Regression + Aligner", "Classifier", "Regression"],
+            "fn": "Barplot_AICimprovement.png"
+        }
+    }
+
+    if plt_type == "count":
+        sel = sel[
+                    ["model", "pid", "align_condition", "AIC", "loss"]
+                 ].groupby(["model", "align_condition"]).agg(
+            {
+                "AIC": ["mean", "std"],
+                "loss": ["mean", "std"],
+                "pid": ["nunique"]
+            }).reset_index()
+
+    if plt_type == "AIC_uplift":
+        sel["aic_baseline"] = 107.51
+        sel["baseline_uplift"] = [
+            ((
+                np.float32(x) - np.float32(sel["AIC"].iloc[i])
+             )/np.float32(x)) * 100
+            for i, x in enumerate(sel["aic_baseline"])
+            ]
+        sel = sel.loc[sel["model"] != "random"]
+
+    plt.figure()
+    sns.barplot(
+        x="model", y=plt_params[plt_type]["y"],
+        hue="align_condition", data=sel
+        )
+    plt.ylabel(plt_params[plt_type]["y_lab"])
+    plt.xlabel("")
+    plt.xticks(
+        ticks=[i for i in range(len(plt_params[plt_type]["x_labs"]))],
+        labels=plt_params[plt_type]["x_labs"]
+        )
+    plt.legend(title="")
+    if save is not False:
+        plt.savefig(plt_params[plt_type]["fn"])
+    plt.show()

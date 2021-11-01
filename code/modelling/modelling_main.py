@@ -28,6 +28,7 @@ sys.path.append(
 
 
 class model_expt:
+    """Model learning in PAL experiment."""
 
     def __init__(self, align_condition, spaceX, spaceY=None,
                  trials=None, trial_types=None, n_blocks=5,
@@ -54,7 +55,7 @@ class model_expt:
             self.y = torch.FloatTensor(spaceY).to(self.device)
 
         if trials is None:
-            trials, trial_types = mu.get_trials(
+            trials, trial_types = mu.generate_trials(
                 spaceX, n_blocks, unsup_per_block
                 )
             self.trials = trials
@@ -76,7 +77,7 @@ class model_expt:
     def train_euclidean(self, hidden_size=100, lr_sup=0.1, lr_unsup=0.1,
                         steps_per_trial=30, temp=1, alpha=1,
                         get_prob_dists=False, eps=1e-30):
-
+        """Train model using Regression loss."""
         model_f = MLP(2, hidden_size, 2).to(self.device)
 
         params = list(model_f.parameters())
@@ -191,7 +192,9 @@ class model_expt:
 
         if self.generalise:
             y_gen = model_f(self.x_gen)
-            dists = mu.get_all_dists(torch.unsqueeze(y_gen, 0), self.y_gen_options)
+            dists = mu.get_all_dists(
+                torch.unsqueeze(y_gen, 0),
+                self.y_gen_options)
 
             # Get cross-entropy loss
             probs_gen = mu.dists_to_probs(dists, self.device, temp=temp)
@@ -219,7 +222,7 @@ class model_expt:
     def train_classifier(self, hidden_size=100, lr_sup=0.1, lr_unsup=0.1,
                          steps_per_trial=30, temp=1, alpha=1,
                          get_prob_dists=False, eps=1e-30):
-
+        """Train model using classifier loss."""
         model_f = MLP_classify(
                 2, hidden_size, self.x.size()[0]
             ).to(self.device)
@@ -347,7 +350,7 @@ class model_expt:
                     lam_a_cyc=1, lam_sup=1, lam_s_cyc=1, lam_dist=0,
                     steps_per_trial=30, temp=1, alpha=1, get_prob_dists=False,
                     eps=1e-30):
-
+        """Train model using Regression + Aligner loss."""
         model_f = MLP(2, hidden_size, 2).to(self.device)
         model_g = MLP(2, hidden_size, 2).to(self.device)
 
@@ -578,6 +581,7 @@ class MLP(nn.Module):
     """
 
     def __init__(self, n_dim_in, hidden, n_dim_out):
+        """Initialize."""
         super(MLP, self).__init__()
 
         hidden = int(hidden)
@@ -609,6 +613,7 @@ class MLP_classify(nn.Module):
     """
 
     def __init__(self, n_dim_in, hidden, n_classes):
+        """Initialize."""
         super(MLP_classify, self).__init__()
 
         self.fc1 = nn.Linear(n_dim_in, hidden)
@@ -628,8 +633,9 @@ class MLP_classify(nn.Module):
         return y
 
 
-def get_hyperparam_min_func(mod_type, align_condition, n_simulations=1, trial_inputs=None,
-                            fit_type="MSE_blockmean", q=None, exclude=False):
+def get_hyperparam_min_func(mod_type, align_condition, n_simulations=1,
+                            trial_inputs=None, fit_type="MSE_blockmean",
+                            q=None, exclude=False):
     """Return function which is inputted for hyperparam optimisation."""
 
     def fit_mse(params, align_condition=align_condition,
@@ -670,8 +676,6 @@ def get_hyperparam_min_func(mod_type, align_condition, n_simulations=1, trial_in
                 collect_probs,
                 on="trial_no",
                 how="right")
-            
-            #print(submitted_inputs)
 
             # Minimise NLL of participant responses
             if fit_type == "sumloglik":
@@ -727,7 +731,7 @@ def get_hyperparam_min_func(mod_type, align_condition, n_simulations=1, trial_in
                 # Select prob for the participant's actual accuracy
                 submitted_inputs["prob"] = [
                     submitted_inputs.loc[i, x]
-                    for i, x 
+                    for i, x
                     in enumerate(submitted_inputs["correct_behaviour"])
                 ]
 
